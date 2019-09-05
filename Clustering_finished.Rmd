@@ -1,9 +1,11 @@
 ---
 title: "Unsupervised learning - clustering and dimension reduction"
 author: "Anna Yeaton"
-date: "Fall 2018"
-fontsize: 11pt 
-output: pdf_document
+date: "Fall 2019"
+output:
+  html_document:
+    df_print: paged
+fontsize: 11pt
 ---
 
 ```{r setup, include=FALSE}
@@ -11,22 +13,20 @@ knitr::opts_chunk$set(echo = TRUE, eval = T)
 ```
 
 # Lab Section
-Download auto data from the github page https://github.com/ayeaton/BMSC-GA-4439-Fall2018/blob/master/Auto.data.txt or the *Statistical Learning* book website here: http://www-bcf.usc.edu/~gareth/ISL/data.html
+Download auto data from the *Statistical Learning* book website here: http://www-bcf.usc.edu/~gareth/ISL/data.html
 
-Today, we are going over Hierarchical clustering, K-Means Clustering, PCA, ICA, and NMF. 
+Today, we are going over Hierarchical clustering, K-Means Clustering, PCA, and ICA. 
 
 ```{r load, include=FALSE}
 library(ggplot2)
 library(tidyverse)
 library(ggfortify)
-library(OpenImageR)
 library(fastICA)
-library(NMF)
 ```
 
 ```{r}
-#setwd("/Users/anna/Documents/GitHub/ML")
-Auto_data <- read_csv("/Users/anna/Desktop/Auto.csv")
+# read in Auto data
+Auto_data <- read_csv("/Users/ay1392/Desktop/Auto.csv")
 
 #remove cars with unknown horsepower and set horsepower to numeric
 Auto_data <- Auto_data %>% 
@@ -112,15 +112,26 @@ Auto_data_names[3]
 
 Now that we know how the algorithm works, let's use the R function hclust. Plot the Dendogram resulting from clustering the Auto_data_clust using average linkage.  
 
-```{r }
+```{r}
 hierarchical_dist <- dist(Auto_data_clust, method = "euclidean")
-plot(hclust(hierarchical_dist, method="average"))
+tree <- hclust(hierarchical_dist, method="average")
+plot(tree)
+```
+
+There is one more element to hierarchical clustering: Cutting the tree. Here, we can control how many clusters we want or the height of the tree. 
+```{r}
+#help(cutree)
+# cut tree into 3 clusters
+tree <- hclust(hierarchical_dist, method="average")
+plot(tree)
+tree_k2 <- cutree(tree, k = 2)
+rect.hclust(tree, k = 3, h = NULL)
 ```
 
 
 \newpage
 
-##K-Means Clustering
+## K-Means Clustering
 Step 1. Choose the N number of clusters.
 
 Step 2. Find the N items that are furthest apart and set them as cluster centroids.
@@ -349,21 +360,28 @@ heatmap(a$S)
 
 \newpage
 
-###Homework
+## Homework
 
 ```{r}
 data(iris)
-iris_subs <- iris[,c(1, 2, 3, 4)]
-species <- iris[,5]
 ```
+
+0. Subset the Iris dataset to only include `Sepal.Length`, `Sepal.Width`, `Petal.Length`, and `Petal.Width`. 
 
 1. Run PCA on the Iris dataset. Plot a scatter plot of PC1 vs PC2 and include the percent variance those PCs describe. 
 
 2. Run ICA on the Iris dataset. Plot the independent components as a heatmap.
 
-3. Use the silhouette function in the cluster package to find the optimal number of clusters for kmeans for the iris dataset. Then cluster using hierarchical clustering and kmeans clustering. Does the data cluster by species? 
+3. Use Kmeans to cluster the Iris data. 
+  * Use the silhouette function in the cluster package to find the optimal number of clusters for kmeans for the iris dataset. Then cluster using kmeans clustering. Does the data cluster by species? 
+  * Using this clustering, color the PCA plot according to the clusters.
+  
+4. Use hierarchical clustering to cluster the Iris data.
 
-4. Using the clustering from question #3 and color the PCA plot according to the clustering. 
+  * Try two different linkage types, and two different distance metrics. 
+  * For one linkage type and one distance metric, try two different cut points. 
+  * Using this clustering, color the PCA plot according to the clusters. (6  plots in total)
+  
 
 # Optional material
 On PCA:
