@@ -3,6 +3,7 @@ title: "Unsupervised learning - clustering and dimension reduction"
 author: "Anna Yeaton"
 date: "Fall 2019"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 fontsize: 11pt
@@ -26,7 +27,7 @@ library(fastICA)
 
 ```{r}
 # read in Auto data
-Auto_data <- read_csv("/Users/ay1392/Desktop/Auto.csv")
+Auto_data <- read_csv("/Users/a/Dropbox/MachineLearning/hw1-yvsui/Auto.csv")
 
 #remove cars with unknown horsepower and set horsepower to numeric
 Auto_data <- Auto_data %>% 
@@ -50,6 +51,7 @@ rownames(Auto_data_clust) <- Auto_data_names[1:25]
 ## Hierarchical agglomerative clustering
 
 Step 1. Assign each item to it's own cluster. We start with 25 clusters, one for each car. 
+
 
 Step 2. Calculate a proximity matrix between each cluster.
 
@@ -79,7 +81,7 @@ arrayInd(which.min(hierarchical_dist), dim(hierarchical_dist))
 
 #postitions 23 and 15 are the most similar. Lets go back to the names of the cars
 Auto_data_names[23]
-Auto_data_names[15]
+Auto_data_names[5]
 
 ```
 
@@ -87,8 +89,9 @@ Step 4. Merge the two clusters together using average linkage.
 
 ```{r }
 #replace pos 15 with the average of pos 15 and 23
-hierarchical_dist[,15] <- apply((hierarchical_dist[,c(23,15)]),1,mean)
-hierarchical_dist[15,] <- apply((hierarchical_dist[c(23,15),]),2,mean)
+
+hierarchical_dist[,15] <- apply((hierarchical_dist[,c(15,23)]),1,mean)
+hierarchical_dist[15,] <- apply((hierarchical_dist[c(15,23),]),2,mean)
 
 #remove pos 23
 hierarchical_dist <- hierarchical_dist[-23,-23]
@@ -100,12 +103,18 @@ Step 5. To complete the algorithm, go back to step 3 and iterate through all of 
 
 ```{r }
 diag(hierarchical_dist) <- NA
-arrayInd(which.min(hierarchical_dist), dim(hierarchical_dist))
+a<-arrayInd(which.min(hierarchical_dist), dim(hierarchical_dist))
 
-#postitions 4 and 3 are the most similar
-Auto_data_names[4]
-Auto_data_names[3]
+#postitions that are the most similar. 
+Auto_data_names[a[1]]
+Auto_data_names[a[2]]
 
+#take means
+hierarchical_dist[,a[1]] <- apply((hierarchical_dist[,c(a[1],a[2])]),1,mean)
+hierarchical_dist[a[1],] <- apply((hierarchical_dist[c(a[1],a[2]),]),2,mean)
+
+#remove one of the positions
+hierarchical_dist <- hierarchical_dist[-a[2],-a[2]]
 ```
 
 ### R function 
@@ -125,7 +134,7 @@ There is one more element to hierarchical clustering: Cutting the tree. Here, we
 # cut tree into 3 clusters
 tree <- hclust(hierarchical_dist, method="average")
 plot(tree)
-tree_k2 <- cutree(tree, k = 2)
+tree_k2 <- cutree(tree, k = 2)#???
 # plot the tree before running this line 
 rect.hclust(tree, k = 3, h = NULL)
 ```
@@ -151,7 +160,7 @@ Step 1. Center the data by subtracting the mean of the each column from the valu
 ```{r}
 Auto_data_clust_pca <- data.matrix(Auto_data_clust)
 
-Center_auto <- apply(Auto_data_clust_pca, 2, function(x) x - mean(x))
+Center_auto <- apply(Auto_data_clust_pca, 2, function(x) x-mean(x))
 ```
 
 
@@ -159,7 +168,7 @@ Step 2. Calculate covariance matrix of the Auto data
 
 ```{r}
 
-Covariance_auto <- cov(Center_auto)
+Covariance_auto <- cov(Center_auto)#??? diagonal value
 ```
 
 Step 3.  Calculate eigen values and vectors
@@ -168,22 +177,22 @@ Step 3.  Calculate eigen values and vectors
 Eigen_value_auto <- eigen(Covariance_auto)$value
 
 #columns are the eigen vectors
-Eigen_vector_auto <- eigen(Covariance_auto)$vector
+Eigen_vector_auto <- eigen(Covariance_auto)$vector #axes on which there is the largest variance
 ```
 
 Step 4. Multiply the eigen vector matrix by the original data. 
 
 ```{r}
-PC <- as.data.frame(data.matrix(Center_auto) %*% Eigen_vector_auto)
+PC <- as.data.frame(data.matrix(Center_auto) %*% Eigen_vector_auto) #rotating the data by eigen axes
 
 ggplot(PC, aes(PC[,1], PC[,2])) + geom_point(aes(PC[,1], PC[,2]))
-#+ geom_text(aes(label=Auto_data_names[1:8]), nudge_x = -2.5, nudge_y = 400)
+#+ geom_text(aes(label=Auto_data_names[1:25]), nudge_x = -2.5, nudge_y = 400)
 ```
 
 Step 5. Find out which principal components explain the variance in the data. 
 
 ```{r}
-#for each component, take the cumulative sum of eigen values up to that point and and divide by the total sum of eigen values
+#for each component, take the cumulative sum of eigen values up to that point and divide by the total sum of eigen values
 round(cumsum(Eigen_value_auto)/sum(Eigen_value_auto) * 100, digits = 2)
 ```
 
@@ -252,14 +261,14 @@ plot(1:500, a$S[,2], type = "l", xlab = "S'2", ylab = "")
 
 ### ICA on the auto data
 ```{r, include=FALSE}
-a <- fastICA(Auto_data_clust, 7, alg.typ = "parallel", fun = "logcosh", alpha = 1,
+b <- fastICA(Auto_data_clust, 7, alg.typ = "parallel", fun = "logcosh", alpha = 1,
              method = "R", row.norm = FALSE, maxit = 200,
              tol = 0.0001, verbose = TRUE)
 ```
 
 plot the independent components as a heatmap
 ```{r}
-heatmap(a$S)
+heatmap(b$S)
 ```
 
 
@@ -272,22 +281,121 @@ data(iris)
 ```
 
 0. Subset the Iris dataset to only include `Sepal.Length`, `Sepal.Width`, `Petal.Length`, and `Petal.Width`. 
+```{r}
+iris_sub <- as.data.frame(iris[,1:4])
+```
 
 1. Write out the Kmeans algorithm by hand, and run two iterations of it. 
+```{r}
+#Assign random group numbers to all datapoints
+#Say, k=2
+groupInd = sample(1:2,1)
+for (ii in 2:nrow(iris_sub)){
+  groupInd = c(groupInd,sample(1:2,1))
+}
+
+cluster1 = iris_sub[which(groupInd %in% 1),]
+cluster2 = iris_sub[which(groupInd %in% 2),]
+
+for (ii in 1:3){ #iteration
+#Calculate centroids for the clusters
+update_centroids = rbind(apply(cluster1[,],2,mean),apply(cluster2[,],2,mean))
+
+#Assign datapoints to clusters again according to distance to centroids
+cluster1 = c(0)
+cluster2 = c(0)
+
+for (jj in 1:nrow(iris_sub)){ #put all datapoints in clusters basing on the 3 initial centroids
+  tmp = as.matrix(dist(rbind(iris_sub[jj,],update_centroids)))
+  diag(tmp) = NA
+  tmp = tmp[,1]
+  a = which.min(tmp)
+  if (a==2){
+    cluster1 = c(cluster1,jj)}
+  else if (a==3){
+    cluster2 = c(cluster2,jj)}
+}
+#new clusters! next iteration
+cluster1 = iris_sub[cluster1[2:length(cluster1)],]
+cluster2 = iris_sub[cluster2[2:length(cluster2)],]
+}
+
+```
 
 2. Run PCA on the Iris dataset. Plot a scatter plot of PC1 vs PC2 and include the percent variance those PCs describe. 
+```{r}
+autoplot(prcomp(iris_sub))
+```
 
 3. Run ICA on the Iris dataset. Plot the independent components as a heatmap.
+```{r}
+c <- fastICA(iris_sub, 2, alg.typ = "parallel", fun = "logcosh", alpha = 1,
+             method = "R", row.norm = FALSE, maxit = 200,
+             tol = 0.0001, verbose = TRUE)
+
+heatmap(c$S)
+```
 
 4. Use Kmeans to cluster the Iris data. 
   * Use the silhouette function in the cluster package to find the optimal number of clusters for kmeans for the iris dataset. Then cluster using kmeans clustering. Does the data cluster by species? 
   * Using this clustering, color the PCA plot according to the clusters.
-  
-5. Use hierarchical clustering to cluster the Iris data.
+```{r}
+library(cluster)
 
+silhouette_score = c(0)
+for (k in 2:5){
+  km = kmeans(iris_sub, k)
+  tmp = silhouette(km$cluster,dist(iris_sub))
+  silhouette_score = c(silhouette_score,mean(tmp[,3]))
+}
+
+silhouette_score = silhouette_score[2:length(silhouette_score)]
+
+plot(2:5, type='b', silhouette_score, xlab='Number of clusters', ylab='Average Silhouette Scores', frame=FALSE)
+
+```
+```{r}
+# From above figure, the optimal k = 2.
+km = kmeans(iris_sub,2)
+km_clusters = as.factor(km$cluster)
+iris_group = cbind(iris_sub,km_clusters)
+
+autoplot(prcomp(iris_sub), data = iris_group, colour='km_clusters')
+autoplot(prcomp(iris_sub), data = iris, colour='Species')
+# Seeing from the two figures below, the data don't cluster exactly by species. However, one of clusters mainly includes species 'setosa', while the other two species fall into the second cluster.
+```
+5. Use hierarchical clustering to cluster the Iris data.
   * Try two different linkage types, and two different distance metrics. 
   * For one linkage type and one distance metric, try two different cut points. 
   * Using this clustering, color the PCA plot according to the clusters. (6  plots in total)
+```{r}
+dist_euclidean = dist(iris_sub,method = "euclidean")
+dist_manhattan = dist(iris_sub,method = "manhattan")
+
+tree_euc_aver = hclust(dist_euclidean, method="average")
+tree_man_sin = hclust(dist_euclidean, method="single")
+plot(tree_euc_aver)
+tree_k2 <- cutree(tree_euc_aver, k = 2)
+rect.hclust(tree_euc_aver, k = 2, h = NULL)
+
+plot(tree_euc_aver)
+tree_k3 <- cutree(tree_euc_aver, k = 3)
+rect.hclust(tree_euc_aver, k = 3, h = NULL)
+
+plot(tree_man_sin)
+rect.hclust(tree_euc_aver, k = 2, h = NULL)
+plot(tree_man_sin)
+rect.hclust(tree_euc_aver, k = 3, h = NULL)
+
+#Seeing from the figures, it seems that hierarchical clustering using euclidean distance and average linkage makes more sense 
+tree_k2 = as.factor(tree_k2)
+iris_group = cbind(iris_sub,tree_k2)
+autoplot(prcomp(iris_sub), data = iris_group, colour='tree_k2', main='Euclidean distance and average linkage used')
+
+tree_k3 = as.factor(tree_k3)
+iris_group = cbind(iris_sub,tree_k3)
+autoplot(prcomp(iris_sub), data = iris_group, colour='tree_k3', main='Euclidean distance and average linkage used')
+```
   
 
 # Optional material
